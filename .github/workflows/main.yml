@@ -1,25 +1,26 @@
-name: Chaoxing Auto Study  #  workflow名称，可自定义
+name: Chaoxing Auto Study
 on:
-  workflow_dispatch:  # 保留手动触发（之前配置的）
+  workflow_dispatch:  # 手动触发
   push:
-    branches: [ main ]  # 可选：提交代码时自动触发
+    branches: [ main ]  # 提交代码触发（可选）
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # 云端运行环境（无需改）
+    runs-on: ubuntu-latest
     steps:
       - name: 拉取仓库代码
-        uses: actions/checkout@v4  # 必选：获取你的仓库文件
+        uses: actions/checkout@v4
 
-      - name: 配置Python环境
+      - name: 配置Python 3.9环境
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'  # 兼容脚本（3.8+均可）
+          python-version: '3.9'  # 锁定3.9版本，避免语法兼容问题
+          cache: 'pip'  # 缓存依赖，加速安装
 
-      - name: 安装依赖包
+      - name: 安装依赖包（加速+超时处理）
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt  # 安装requirements.txt中的依赖
+          pip install --no-cache-dir --timeout 60 -r requirements.txt
 
-      - name: 执行刷课脚本（关键步骤）
-        run: python main.py -c config_template.ini  # 读取配置文件并启动脚本
+      - name: 执行刷课脚本
+        run: python main.py -c config_template.ini
