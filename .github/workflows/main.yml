@@ -1,6 +1,6 @@
 name: Chaoxing Auto Study
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:  # 手动触发（核心）
   push:
     branches: [ main ]  # 提交代码触发（可选）
 
@@ -11,11 +11,11 @@ jobs:
       - name: 拉取仓库代码
         uses: actions/checkout@v4
 
-      - name: 配置Python 3.9环境
+      - name: 配置Python 3.10环境（支持match语法）
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'  # 锁定3.9版本，避免语法兼容问题
-          cache: 'pip'  # 缓存依赖，加速安装
+          python-version: '3.10'  # 解决 match 语法报错的关键
+          cache: 'pip'  # 缓存依赖，减少安装时间
 
       - name: 安装依赖包（加速+超时处理）
         run: |
