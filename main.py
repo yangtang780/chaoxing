@@ -3,30 +3,10 @@ import argparse
 import configparser
 from api.logger import logger
 from api.base import Chaoxing, Account
-from api.exceptions import LoginError, FormatError, JSONDecodeError,MaxRollBackError
+from api.exceptions import LoginError, FormatError, JSONDecodeError, MaxRollBackError
 from api.answer import Tiku
-from urllib3 import disable_warnings,exceptions
+from urllib3 import disable_warnings, exceptions
 import os
-
-# # 定义全局变量，用于存储配置文件路径
-# textPath = './resource/BookID.txt'
-
-# # 获取文本 -> 用于查看学习过的课程ID
-# def getText():
-#     try: 
-#         if not os.path.exists(textPath):
-#             with open(textPath, 'x') as file: pass 
-#             return []
-#         with open(textPath, 'r', encoding='utf-8') as file: content = file.read().split(',')
-#         content = {int(item.strip()) for item in content if item.strip()}
-#         return list(content)
-#     except Exception as e: logger.error(f"获取文本失败: {e}"); return []
-
-# # 追加文本 -> 用于记录学习过的课程ID
-# def appendText(text):
-#     if not os.path.exists(textPath): return
-#     with open(textPath, 'a', encoding='utf-8') as file: file.write(f'{text}, ') 
-    
 
 # 关闭警告
 disable_warnings(exceptions.InsecureRequestWarning)
@@ -49,14 +29,14 @@ def init_config():
                 config['tiku']
                 )
     else:
-        return (args.username, args.password, args.list.split(",") if args.list else None, int(args.speed) if args.speed else 1,None)
+        return (args.username, args.password, args.list.split(",") if args.list else None, int(args.speed) if args.speed else 1, None)
 
 class RollBackManager:
     def __init__(self) -> None:
         self.rollback_times = 0
         self.rollback_id = ""
 
-    def add_times(self,id:str) -> None:
+    def add_times(self, id:str) -> None:
         if id == self.rollback_id and self.rollback_times == 3:
             raise MaxRollBackError("回滚次数已达3次，请手动检查学习通任务点完成情况")
         elif id != self.rollback_id:
@@ -72,7 +52,7 @@ if __name__ == '__main__':
         # 避免异常的无限回滚
         RB = RollBackManager()
         # 初始化登录信息
-        username, password, course_list, speed,tiku_config= init_config()
+        username, password, course_list, speed, tiku_config = init_config()
         # 规范化播放速度的输入值
         speed = min(2.0, max(1.0, speed))
         if (not username) or (not password):
@@ -85,7 +65,7 @@ if __name__ == '__main__':
         tiku = tiku.get_tiku_from_config()  # 载入题库
         tiku.init_tiku()    # 初始化题库
         # 实例化超星API
-        chaoxing = Chaoxing(account=account,tiku=tiku)
+        chaoxing = Chaoxing(account=account, tiku=tiku)
         # 检查当前登录状态，并检查账号密码
         _login_state = chaoxing.login()
         if not _login_state["status"]:
@@ -126,11 +106,9 @@ if __name__ == '__main__':
                 job_info = None
                 jobs, job_info = chaoxing.get_job_list(course["clazzId"], course["courseId"], course["cpi"], point["id"])
                 
-                # bookID = job_info["knowledgeid"] # 获取视频ID
-                
                 # 发现未开放章节，尝试回滚上一个任务重新完成一次
                 try:
-                    if job_info.get('notOpen',False):
+                    if job_info.get('notOpen', False):
                         __point_index -= 1  # 默认第一个任务总是开放的
                         # 针对题库启用情况
                         if not tiku or tiku.DISABLE or not tiku.SUBMIT:
@@ -153,13 +131,6 @@ if __name__ == '__main__':
                 for job in jobs:
                     # 视频任务
                     if job["type"] == "video":
-                        # TODO: 目前这个记录功能还不够完善，中途退出的课程ID也会被记录
-                        # TextBookID = getText() # 获取学习过的课程ID
-                        # if TextBookID.count(bookID) > 0: 
-                        #     logger.info(f"课程: {course['title']} 章节: {point['title']} 任务: {job['title']} 已学习过或在学习中，跳过") # 如果已经学习过该课程，则跳过
-                        #     break # 如果已经学习过该课程，则跳过
-                        # appendText(bookID) # 记录正在学习的课程ID
-
                         logger.trace(f"识别到视频任务, 任务章节: {course['title']} 任务ID: {job['jobid']}")
                         # 超星的接口没有返回当前任务是否为Audio音频任务
                         isAudio = False
@@ -180,11 +151,11 @@ if __name__ == '__main__':
                     # 测验任务
                     elif job["type"] == "workid":
                         logger.trace(f"识别到章节检测任务, 任务章节: {course['title']}")
-                        chaoxing.study_work(course, job,job_info)
-                    # 阅读任务
+                        chaoxing.study_work(course, job, job_info)
+                    # 阅读任务 - 修复拼写错误 strdy_read -> study_read
                     elif job["type"] == "read":
                         logger.trace(f"识别到阅读任务, 任务章节: {course['title']}")
-                        chaoxing.strdy_read(course, job,job_info)
+                        chaoxing.study_read(course, job, job_info)
                 __point_index += 1
         logger.info("所有课程学习任务已完成")
     except BaseException as e:
