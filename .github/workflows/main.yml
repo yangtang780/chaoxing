@@ -1,47 +1,25 @@
-name: CI
-
+name: Chaoxing Auto Study  #  workflow名称，可自定义
 on:
-  push: # 提交代码时触发
-    branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+  workflow_dispatch:  # 保留手动触发（之前配置的）
+  push:
+    branches: [ main ]  # 可选：提交代码时自动触发
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            architecture: 'x64'
-            name: 'win64'
-
+    runs-on: ubuntu-latest  # 云端运行环境（无需改）
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v3
+      - name: 拉取仓库代码
+        uses: actions/checkout@v4  # 必选：获取你的仓库文件
+
+      - name: 配置Python环境
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
-          architecture: ${{matrix.architecture}}
+          python-version: '3.9'  # 兼容脚本（3.8+均可）
 
-      - name: Install requirements
+      - name: 安装依赖包
         run: |
-          pip install -r requirements.txt
-          pip install pyinstaller
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt  # 安装requirements.txt中的依赖
 
-      - name: Build win bin
-        run: pyinstaller -F main.py -n 'chaoxing' --add-data "resource;resource"
-
-      - name: Create release package
-        run: |
-          mkdir release
-          copy dist\chaoxing.exe release\
-          copy config_template.ini release\
-          cd release
-          7z a -tzip chaoxing.zip *
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.name }}
-          path: 'release/chaoxing.zip'
+      - name: 执行刷课脚本（关键步骤）
+        run: python main.py -c config_template.ini  # 读取配置文件并启动脚本
